@@ -1,0 +1,37 @@
+# Konfigurasi utama proyek PredictaCoin
+# Sistem Prediksi Harga & Deteksi Anomali Cryptocurrency dengan Continual Learning
+
+data:
+  source: "coingecko_api"
+  assets: ["bitcoin", "ethereum"]
+  fetch_interval_hours: 1
+  history_window_days: 7
+  raw_path: "data/raw"
+  processed_path: "data/processed"
+
+labeling:
+  horizon_hours: 1
+  threshold_up_pct: 0.5
+  threshold_down_pct: -0.5
+
+model:
+  task: "multiclass_classification"
+  classes: ["Naik", "Turun", "Stabil"]
+  registry_path: "models"
+  primary_model: "xgboost"
+  baseline_model: "logistic_regression"
+  calibration: "isotonic"      # untuk menyelaraskan confidence score dengan akurasi aktual
+  validation_strategy: "walk_forward"   # TimeSeriesSplit, bukan random k-fold
+
+anomaly_detection:
+  method: "isolation_forest"   # terpisah dari model klasifikasi tren
+  contamination: 0.02
+
+continual_learning:
+  scheduled_retrain_hours: 24
+  performance_drop_threshold_pct: 10
+  drift_metric: "PSI"
+
+monitoring:
+  max_inference_latency_seconds: 5
+  drift_alert_threshold: 0.2
