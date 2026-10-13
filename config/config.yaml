@@ -13,8 +13,8 @@ data:
 
 labeling:
   horizon_hours: 1
-  threshold_up_pct: 0.5
-  threshold_down_pct: -0.5
+  threshold_up_pct: 0.2
+  threshold_down_pct: -0.2
 
 model:
   task: "multiclass_classification"
