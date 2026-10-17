@@ -1,15 +1,15 @@
 {
   "schema_version": "0.1.0",
-  "generated_at_utc": "2026-10-17T19:11:08+00:00",
-  "git_commit_code": "61b33d5",
-  "rows": 4498,
+  "generated_at_utc": "2026-10-17T22:08:15+00:00",
+  "git_commit_code": "8201b68",
+  "rows": 4504,
   "coins": [
     "bitcoin",
     "ethereum"
   ],
   "time_range_utc": [
     "2026-07-16T02:00:00+00:00",
-    "2026-10-17T18:00:00+00:00"
+    "2026-10-17T21:00:00+00:00"
   ],
   "label_distribution": {
     "Stabil": 0.564,
