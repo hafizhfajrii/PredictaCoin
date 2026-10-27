@@ -11,6 +11,18 @@ data:
   interim_path: "data/interim"
   processed_path: "data/processed"
 
+# LK-04: opsi ingestion
+ingestion:
+  snapshot_enabled: true                # simpan JSON mentah ber-timestamp tiap run
+  snapshot_path: "data/raw/snapshots"
+  snapshot_retention_days: 7            # 0 = simpan semua snapshot
+
+# LK-04: parameter preprocessing
+preprocessing:
+  max_ffill_hours: 3                    # gap > 3 jam tidak diisi
+  outlier_window_hours: 168             # jendela robust z-score (7 hari)
+  outlier_z_threshold: 5.0
+
 labeling:
   horizon_hours: 1
   threshold_up_pct: 0.2
