@@ -1,0 +1,4 @@
+[core]
+    remote = penyimpanan
+['remote "penyimpanan"']
+    url = /home/vscode/dvc-storage
