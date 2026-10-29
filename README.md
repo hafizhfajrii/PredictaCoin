@@ -153,6 +153,57 @@ dan snapshot bertambah tanpa menghapus yang lama.
 | `[retry n/5] ... HTTP 429` | Rate limit, skrip menunggu otomatis |
 | `Tidak ada data raw untuk ...` | Jalankan `ingest_data.py` dulu |
 
-## 6. Lisensi
+## 6. LK-05: Data Versioning dengan DVC
+
+**Mengapa data perlu diversioning.** Pada Continual Learning, data bertambah tiap jam dan model dilatih
+ulang berkala. Tanpa catatan versi data, training tidak bisa diulang dan dua model tidak bisa dibandingkan
+secara adil. Dengan DVC, setiap model dapat mencatat versi datanya (tag `data-vX.Y.Z`) sehingga dataset
+yang persis sama dapat dikembalikan kapan saja (reproduksibilitas), dan setiap perubahan data tercatat
+dengan hash (audit). Git hanya menyimpan file penunjuk `.dvc` (sekitar 100 byte), bukan data besarnya.
+
+**Data yang dilacak.** `data/raw/` dikelola pipeline GitHub Actions (commit tiap jam), jadi tidak dilacak
+langsung. `export_dataset.py` menggabungkan data mentah BTC dan ETH (hasil LK-04) menjadi
+`data/dvc/dataset_raw.parquet` yang dilacak DVC.
+
+**Persiapan (sekali saja).**
+
+```bash
+pip install "dvc>=3.0"
+dvc init
+dvc remote add -d penyimpanan $HOME/dvc-storage
+```
+
+**Alur menambah versi data baru.**
+
+```bash
+python src/data/ingest_data.py          # ambil data terbaru
+python src/data/export_dataset.py       # ekspor dataset gabungan
+dvc status                              # perubahan terdeteksi (modified)
+dvc add data/dvc/dataset_raw.parquet    # hash di file .dvc berubah
+git add data/dvc/dataset_raw.parquet.dvc
+git commit -m "data: dataset versi baru"
+git tag data-v1.0.1                     # PATCH: data bertambah, skema tetap
+dvc push                                # kirim data ke remote
+```
+
+**Hasil simulasi dua versi.**
+
+| | Versi 1 (`data-v1.0.0`) | Versi 2 (`data-v1.0.1`) |
+|---|---|---|
+| Hash `md5` | `e90f7ae6...` | `3381a186...` |
+| Total baris | 5.086 | 5.090 |
+
+```bash
+dvc diff data-v1.0.0 data-v1.0.1 --show-hash
+# Modified:
+#     e90f7ae6..3381a186  data/dvc/dataset_raw.parquet
+```
+
+Kembali ke versi lama: `git checkout data-v1.0.0 -- data/dvc/dataset_raw.parquet.dvc` lalu `dvc checkout`.
+
+**Catatan.** Remote saat ini folder lokal di luar repositori. Untuk storage eksternal (S3, GCP, MinIO),
+cukup ganti URL remote dengan `dvc remote modify`; alur di atas tidak berubah.
+
+## 7. Lisensi
 
 Proyek ini menggunakan lisensi **MIT**
