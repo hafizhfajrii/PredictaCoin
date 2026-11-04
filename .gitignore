@@ -226,3 +226,8 @@ models/*.joblib
 !models/.gitkeep
 .env
 *.log
+
+# MLflow
+mlflow.db
+mlartifacts/
+mlruns/
