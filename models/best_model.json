@@ -1,0 +1,64 @@
+{
+  "registered_model": {
+    "name": "predictacoin-trend-classifier",
+    "version": "1",
+    "alias": "champion"
+  },
+  "selection": {
+    "experiment": "PredictaCoin-trend-classification",
+    "metric": "cv_f1_macro_mean",
+    "value": 0.40161596272578653
+  },
+  "run": {
+    "run_id": "e624f1a388404efd818244949ceac8f5",
+    "run_name": "xgb-300-d6-lr0.03-balanced"
+  },
+  "params": {
+    "seed": "42",
+    "class_weight": "balanced",
+    "n_features": "21",
+    "n_test": "1066",
+    "data_rows": "5326",
+    "data_end": "2026-11-04 00:00:00+00:00",
+    "n_estimators": "300",
+    "model": "xgboost",
+    "max_depth": "6",
+    "test_size": "0.2",
+    "cv_splits": "5",
+    "data_start": "2026-07-16 02:00:00+00:00",
+    "n_train": "4258",
+    "data_md5": "64b23223f42ed9f5ac84dc8e675e8cff",
+    "learning_rate": "0.03"
+  },
+  "metrics": {
+    "test_f1_Stabil": 0.5688073394495413,
+    "train_recall_macro": 0.9558207127661679,
+    "train_f1_macro": 0.9385944560267742,
+    "test_f1_macro": 0.3928105297032028,
+    "test_f1_weighted": 0.4467801665819232,
+    "train_precision_macro": 0.9246605221910661,
+    "test_recall_macro": 0.3977927969775796,
+    "cv_f1_macro_std": 0.026516301432178747,
+    "test_f1_Naik": 0.32892249527410206,
+    "test_f1_Turun": 0.2807017543859649,
+    "train_f1_Turun": 0.9222577209797657,
+    "train_f1_Naik": 0.9462474645030426,
+    "train_f1_Stabil": 0.947278182597514,
+    "test_accuracy": 0.4399624765478424,
+    "train_accuracy": 0.9415218412400188,
+    "test_precision_macro": 0.39288924012321064,
+    "cv_f1_macro_mean": 0.40161596272578653,
+    "train_f1_weighted": 0.9418402948075342
+  },
+  "data": {
+    "version": "data-v1.1.0",
+    "md5": "64b23223f42ed9f5ac84dc8e675e8cff",
+    "rows": "5326",
+    "start": "2026-07-16 02:00:00+00:00",
+    "end": "2026-11-04 00:00:00+00:00"
+  },
+  "code": {
+    "git_commit": "22d926d"
+  },
+  "registered_at_utc": "2026-11-04T15:00:05+00:00"
+}
