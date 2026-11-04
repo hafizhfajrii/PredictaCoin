@@ -1,19 +1,19 @@
 {
   "schema_version": "0.1.0",
-  "generated_at_utc": "2026-11-04T08:54:05+00:00",
-  "git_commit_code": "90bebdc",
-  "rows": 5340,
+  "generated_at_utc": "2026-11-04T17:00:25+00:00",
+  "git_commit_code": "4350c87",
+  "rows": 5356,
   "coins": [
     "bitcoin",
     "ethereum"
   ],
   "time_range_utc": [
     "2026-07-16T02:00:00+00:00",
-    "2026-11-04T07:00:00+00:00"
+    "2026-11-04T15:00:00+00:00"
   ],
   "label_distribution": {
-    "Stabil": 0.561,
-    "Naik": 0.224,
+    "Stabil": 0.56,
+    "Naik": 0.225,
     "Turun": 0.215
   }
 }
