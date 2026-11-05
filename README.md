@@ -204,6 +204,41 @@ Kembali ke versi lama: `git checkout data-v1.0.0 -- data/dvc/dataset_raw.parquet
 **Catatan.** Remote saat ini folder lokal di luar repositori. Untuk storage eksternal (S3, GCP, MinIO),
 cukup ganti URL remote dengan `dvc remote modify`; alur di atas tidak berubah.
 
+## 7. LK-06: Eksperimen ML dengan MLflow
+
+Model klasifikasi tren (Naik / Turun / Stabil) dilatih dan dicatat dengan MLflow (parameter, metrik, model).
+
+Data: snapshot fitur `data/dvc/features_train.parquet` (DVC, tag `data-v1.1.0`, 5.326 baris, 21 fitur).
+
+Evaluasi: split kronologis 80:20 dan walk-forward CV, metrik utama F1-macro karena kelas Stabil dominan.
+
+**Cara menjalankan** (dari root proyek):
+
+```bash
+pip install -r requirements-train.txt
+bash src/models/run_experiments.sh data-v1.1.0                        # 6 eksperimen
+mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5000         # dashboard
+python src/models/register_best.py                                    # daftar model terbaik
+```
+
+**Hasil:**
+
+| Run | cv_f1_macro | test_f1_macro |
+|---|---|---|
+| baseline-dummy | 0,2416 | 0,2339 |
+| lr-c1.0 | 0,3051 | 0,2875 |
+| lr-c0.1-balanced | 0,3895 | 0,3786 |
+| xgb-100-d3-lr0.1 | 0,3497 | 0,3190 |
+| xgb-200-d4-lr0.05 | 0,3654 | 0,3168 |
+| **xgb-300-d6-lr0.03-balanced** | **0,4016** | **0,3928** |
+
+**Model terbaik** (dipilih dari `cv_f1_macro`): XGBoost `n_estimators=300`, `max_depth=6`,
+`learning_rate=0.03`, `class_weight=balanced`. Terdaftar di Model Registry sebagai
+`predictacoin-trend-classifier` (alias `champion`); metadata di `models/best_model.json`.
+
+**Reproduksibilitas:** seed 42, versi data (tag dan md5), dan git commit dicatat di tiap run.
+`mlflow.db` dan `mlartifacts/` tidak di-commit; jalankan ulang `run_experiments.sh` pada data `data-v1.1.0`.
+
 ## 7. Lisensi
 
 Proyek ini menggunakan lisensi **MIT**
