@@ -1,0 +1,35 @@
+registered_model:
+  name: predictacoin-trend-xgb
+  version: 2
+  alias: production
+  stage: Production
+source_run:
+  run_id: fd896b1967294b6c919d7f34fcde4166
+  run_name: xgb-300-d4-lr0.03-balanced
+selection_reason: CV F1 sedikit lebih tinggi (0,4049 vs 0,4016), F1 uji lebih tinggi
+  (0,4083 vs 0,3928), dan selisih latih-uji jauh lebih kecil (0,314 vs 0,546) sehingga
+  overfitting berkurang
+params:
+  n_estimators: 300
+  max_depth: 4
+  learning_rate: 0.03
+  class_weight: balanced
+metrics:
+  cv_f1_macro_mean: 0.4049
+  cv_f1_macro_std: 0.0363
+  test_f1_macro: 0.4083
+  test_accuracy: 0.4334
+  train_f1_macro: 0.7219
+data:
+  version: data-v1.1.0
+  md5: 64b23223f42ed9f5ac84dc8e675e8cff
+  rows: 5326
+  start: '2026-07-16 02:00:00+00:00'
+  end: '2026-11-04 00:00:00+00:00'
+code:
+  git_commit: 0912b5a
+  training_commit: 0912b5a
+artifact:
+  dir: models/production
+  dvc_pointer: models/production.dvc
+exported_at_utc: '2026-11-11T16:51:51+00:00'
