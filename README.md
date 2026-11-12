@@ -279,6 +279,6 @@ model = mlflow.pyfunc.load_model("models:/predictacoin-trend-xgb@production")
 **Catatan:** stage pada MLflow 3.x sudah deprecated, jadi transisi dicatat sebagai stage sekaligus alias
 (`staging`, `production`).
 
-## 8. Lisensi
+## 9. Lisensi
 
 Proyek ini menggunakan lisensi **MIT**
