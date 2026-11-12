@@ -239,6 +239,46 @@ python src/models/register_best.py                                    # daftar m
 **Reproduksibilitas:** seed 42, versi data (tag dan md5), dan git commit dicatat di tiap run.
 `mlflow.db` dan `mlartifacts/` tidak di-commit; jalankan ulang `run_experiments.sh` pada data `data-v1.1.0`.
 
-## 7. Lisensi
+## 8. LK-07: Model Registry dan Kesiapan Inferensi
+
+Model terdaftar di MLflow Model Registry sebagai `predictacoin-trend-xgb`. Versi yang saat ini
+**aktif untuk inferensi adalah v2 (Production)**.
+
+| Versi | Parameter | CV F1-macro | Uji F1-macro | Selisih latih-uji | Stage |
+|---|---|---|---|---|---|
+| v1 | XGBoost, max_depth=6 | 0,4016 | 0,3928 | 0,546 | Staging |
+| **v2** | XGBoost, max_depth=4 | **0,4049** | **0,4083** | **0,314** | **Production** |
+
+Parameter lain sama (`n_estimators=300`, `learning_rate=0.03`, `class_weight=balanced`, data `data-v1.1.0`).
+**Alasan memilih v2:** F1 validasi dan uji lebih tinggi, serta selisih latih-uji jauh lebih kecil sehingga
+overfitting berkurang. Selisih CV-nya kecil (0,003, di bawah simpangan baku sekitar 0,03), jadi alasan
+utamanya adalah overfitting yang berkurang.
+
+**Cara menjalankan** (dari root proyek):
+
+```bash
+python src/models/registry_tool.py register --run-name xgb-300-d4-lr0.03-balanced   # daftar versi
+python src/models/registry_tool.py compare                                          # bandingkan versi
+python src/models/registry_tool.py promote --version 2 --stage Production           # transisi stage
+python src/models/registry_tool.py verify                                           # uji inferensi
+python src/models/registry_tool.py export --reason "..."                            # ekspor + metadata
+```
+
+**Memuat model Production untuk inferensi:**
+
+```python
+import mlflow
+
+model = mlflow.pyfunc.load_model("models:/predictacoin-trend-xgb@production")
+```
+
+**Metadata dan DVC:** `models/production_model.yaml` mencatat versi model, run, parameter, metrik, versi data
+(tag dan md5), commit, dan alasan pemilihan. File model dilacak DVC lewat `models/production.dvc`
+(ambil dengan `dvc pull`), sehingga model, data (`data-v1.1.0`), dan kode saling terhubung.
+
+**Catatan:** stage pada MLflow 3.x sudah deprecated, jadi transisi dicatat sebagai stage sekaligus alias
+(`staging`, `production`).
+
+## 8. Lisensi
 
 Proyek ini menggunakan lisensi **MIT**
