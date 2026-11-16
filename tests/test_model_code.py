@@ -204,6 +204,7 @@ def test_training_then_validation_end_to_end(tmp_path, monkeypatch):
     make_features().to_parquet(data_path, index=False)
     uri = f"sqlite:///{(tmp_path / 'mlflow.db').as_posix()}"
     monkeypatch.setenv("MLFLOW_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
     common = ["--data", str(data_path), "--tracking-uri", uri,
               "--experiment-name", "smoke", "--cv-splits", "3"]
 
@@ -220,4 +221,5 @@ def test_training_then_validation_end_to_end(tmp_path, monkeypatch):
     code = validate_model.main(["--run-name", "smoke-run", "--tracking-uri",
                                 uri, "--experiment-name", "smoke"])
     assert code in (0, 1)
-    assert client.get_run(run_id).data.tags["validation"] in ("passed", "failed")
+    assert client.get_run(run_id).data.tags["validation"] in (
+        "passed", "failed")
