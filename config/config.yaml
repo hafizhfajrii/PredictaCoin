@@ -5,22 +5,22 @@ data:
   source: "coingecko_api"
   assets: ["bitcoin", "ethereum"]
   fetch_interval_hours: 1
-  history_window_days: 90   
-  incremental_days: 2        
+  history_window_days: 90
+  incremental_days: 2
   raw_path: "data/raw"
   interim_path: "data/interim"
   processed_path: "data/processed"
 
 # LK-04: opsi ingestion
 ingestion:
-  snapshot_enabled: true                # simpan JSON mentah ber-timestamp tiap run
+  snapshot_enabled: true # simpan JSON mentah ber-timestamp tiap run
   snapshot_path: "data/raw/snapshots"
-  snapshot_retention_days: 7            # 0 = simpan semua snapshot
+  snapshot_retention_days: 7 # 0 = simpan semua snapshot
 
 # LK-04: parameter preprocessing
 preprocessing:
-  max_ffill_hours: 3                    # gap > 3 jam tidak diisi
-  outlier_window_hours: 168             # jendela robust z-score (7 hari)
+  max_ffill_hours: 3 # gap > 3 jam tidak diisi
+  outlier_window_hours: 168 # jendela robust z-score (7 hari)
   outlier_z_threshold: 5.0
 
 # LK-08: hyperparameter yang dipakai pipeline otomatis (train.py --from-config)
@@ -28,15 +28,15 @@ training:
   model: "xgboost"
   n_estimators: 300
   max_depth: 4
-  learning_rate: 0.03
+  learning_rate: 0.05
   class_weight: "balanced"
 
 # LK-08: kriteria kelulusan model sebelum masuk Model Registry
 validation:
-  min_f1_gain_over_baseline: 0.05   # F1-macro harus melampaui baseline dummy minimal sebesar ini
-  min_class_f1: 0.25                # F1 tiap kelas minimal (model tidak bias ke satu kelas)
-  max_latency_seconds: 5.0          # latensi inference (LK-01: di bawah 5 detik)
-  max_train_test_gap: 0.50          # batas overfitting: F1 latih - F1 uji
+  min_f1_gain_over_baseline: 0.05 # F1-macro harus melampaui baseline dummy minimal sebesar ini
+  min_class_f1: 0.25 # F1 tiap kelas minimal (model tidak bias ke satu kelas)
+  max_latency_seconds: 5.0 # latensi inference (LK-01: di bawah 5 detik)
+  max_train_test_gap: 0.50 # batas overfitting: F1 latih - F1 uji
 
 labeling:
   horizon_hours: 1
@@ -49,16 +49,16 @@ model:
   registry_path: "models"
   primary_model: "xgboost"
   baseline_model: "logistic_regression"
-  calibration: "isotonic"      
-  validation_strategy: "walk_forward"  
+  calibration: "isotonic"
+  validation_strategy: "walk_forward"
 
 anomaly_detection:
-  method: "isolation_forest"   
+  method: "isolation_forest"
   contamination: 0.02
 
 continual_learning:
   scheduled_retrain_hours: 24
   performance_drop_threshold_pct: 10
   drift_metric: "PSI"
-  anomaly_trigger_min_count: 3   
-  anomaly_trigger_window_hours: 6  
+  anomaly_trigger_min_count: 3
+  anomaly_trigger_window_hours: 6
