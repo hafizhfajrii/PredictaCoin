@@ -27,8 +27,8 @@ preprocessing:
 training:
   model: "xgboost"
   n_estimators: 300
-  max_depth: 8
-  learning_rate: 0.03
+  max_depth: 4
+  learning_rate: 0.05
   class_weight: "balanced"
 
 # LK-08: kriteria kelulusan model sebelum masuk Model Registry
