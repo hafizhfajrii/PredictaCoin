@@ -1,22 +1,3 @@
-"""
-Training model klasifikasi tren harga (Naik / Turun / Stabil) dengan MLflow.
-
-Setiap eksekusi = satu run MLflow yang mencatat:
-    * parameter  : hyperparameter, seed, ukuran data, versi data (md5 + tag)
-    * metrik     : walk-forward CV (data latih) dan evaluasi hold-out (data uji)
-    * artefak    : model (log_model), confusion matrix, classification report
-    * tag        : git commit, versi data, pemetaan label
-
-Evaluasi mengikuti urutan waktu (bukan acak) agar tidak terjadi kebocoran
-data masa depan: 80% data tertua untuk latih (dengan walk-forward CV),
-20% data terbaru untuk uji akhir.
-
-Jalankan:
-    python src/models/train.py --model xgboost --n-estimators 200 --max-depth 4
-    python src/models/train.py --model logistic_regression --c 0.1
-    bash src/models/run_experiments.sh     # 6 variasi sekaligus
-"""
-
 import argparse
 import hashlib
 import logging

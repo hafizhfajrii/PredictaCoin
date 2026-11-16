@@ -32,7 +32,6 @@ training:
   class_weight: "balanced"
 
 # LK-08: kriteria kelulusan model sebelum masuk Model Registry
-# (mengacu pada Kriteria Keberhasilan LK-01, bagian 4.1)
 validation:
   min_f1_gain_over_baseline: 0.05   # F1-macro harus melampaui baseline dummy minimal sebesar ini
   min_class_f1: 0.25                # F1 tiap kelas minimal (model tidak bias ke satu kelas)

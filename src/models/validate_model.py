@@ -1,23 +1,3 @@
-"""
-Validasi otomatis model sebelum masuk Model Registry (LK-08).
-
-Kriteria kelulusan mengacu pada Kriteria Keberhasilan LK-01 (bagian 4.1):
-    * F1-macro melampaui baseline (model dummy kelas mayoritas) minimal
-      sebesar `min_f1_gain_over_baseline`
-    * F1 tiap kelas di atas `min_class_f1` (model tidak bias ke satu kelas)
-    * Latensi inference di bawah `max_latency_seconds` (LK-01: 5 detik)
-    * Selisih F1 latih-uji maksimal `max_train_test_gap` (batas overfitting)
-
-Akurasi dibandingkan dengan baseline mayoritas hanya sebagai informasi
-(tidak memblokir): model dengan class_weight=balanced sengaja menukar akurasi
-dengan F1 kelas minoritas, sehingga akurasinya bisa di bawah baseline.
-
-Exit code 0 = lolos validasi, 1 = gagal (pipeline berhenti sebelum registry).
-
-Jalankan:
-    python src/models/validate_model.py --run-name ci-abc1234
-"""
-
 import argparse
 import logging
 import os
