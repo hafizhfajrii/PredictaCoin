@@ -23,6 +23,21 @@ preprocessing:
   outlier_window_hours: 168             # jendela robust z-score (7 hari)
   outlier_z_threshold: 5.0
 
+# LK-08: hyperparameter yang dipakai pipeline otomatis (train.py --from-config)
+training:
+  model: "xgboost"
+  n_estimators: 300
+  max_depth: 4
+  learning_rate: 0.03
+  class_weight: "balanced"
+
+# LK-08: kriteria kelulusan model sebelum masuk Model Registry
+validation:
+  min_f1_gain_over_baseline: 0.05   # F1-macro harus melampaui baseline dummy minimal sebesar ini
+  min_class_f1: 0.25                # F1 tiap kelas minimal (model tidak bias ke satu kelas)
+  max_latency_seconds: 5.0          # latensi inference (LK-01: di bawah 5 detik)
+  max_train_test_gap: 0.50          # batas overfitting: F1 latih - F1 uji
+
 labeling:
   horizon_hours: 1
   threshold_up_pct: 0.2
