@@ -1,3 +1,21 @@
+"""
+Manajemen Model Registry MLflow untuk PredictaCoin (LK-07).
+
+Subperintah:
+    register  daftarkan model dari satu run sebagai versi baru (deskripsi + tag)
+    compare   bandingkan seluruh versi (parameter, metrik, versi data)
+    promote   ubah stage (None -> Staging -> Production) dan alias
+    verify    muat model Production lewat mlflow.pyfunc dan uji inferensi
+    export    salin model Production ke models/production/ (dilacak DVC) dan
+              tulis models/production_model.yaml
+
+Contoh (dari root proyek):
+    python src/models/registry_tool.py register --run-name xgb-300-d6-lr0.03-balanced
+    python src/models/registry_tool.py compare
+    python src/models/registry_tool.py promote --version 1 --stage Staging
+    python src/models/registry_tool.py verify
+"""
+
 import argparse
 import logging
 import shutil
