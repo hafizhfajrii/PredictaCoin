@@ -1,0 +1,178 @@
+name: MLOps Automation (test - train - evaluate - registry)
+
+# Code as a Trigger: perubahan kode/konfigurasi memicu seluruh rantai otomatis.
+# Commit data oleh bot (ingest.yml) tidak memicu workflow ini.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/mlops-automation.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/mlops-automation.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mlops-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------- Tahap 1
+  test:
+    name: 1. Automated testing (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-train.txt
+
+      - name: Run unit tests
+        run: python -m pytest tests -v
+
+  # ---------------------------------------------------------------- Tahap 2
+  train:
+    name: 2. Automated training
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-train.txt
+
+      - name: Train baseline (dummy) sebagai pembanding
+        run: |
+          RUN_NAME="ci-${GITHUB_SHA::7}"
+          python src/models/train.py --model dummy \
+            --data data/processed/features.parquet \
+            --data-version "$RUN_NAME" \
+            --run-name "${RUN_NAME}-baseline"
+
+      - name: Train model (hyperparameter dari config.yaml)
+        run: |
+          RUN_NAME="ci-${GITHUB_SHA::7}"
+          python src/models/train.py --from-config \
+            --data data/processed/features.parquet \
+            --data-version "$RUN_NAME" \
+            --run-name "$RUN_NAME"
+
+      - name: Simpan hasil MLflow untuk tahap berikutnya
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-run
+          path: |
+            mlflow.db
+            mlartifacts
+          retention-days: 7
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- Tahap 3
+  evaluate:
+    name: 3. Model evaluation and validation
+    needs: train
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-train.txt
+
+      - name: Ambil hasil training
+        uses: actions/download-artifact@v4
+        with:
+          name: mlflow-run
+          path: .
+
+      - name: Validasi metrik terhadap ambang batas
+        run: python src/models/validate_model.py --run-name "ci-${GITHUB_SHA::7}"
+
+  # ---------------------------------------------------------------- Tahap 4
+  register:
+    name: 4. Auto-registry update (Staging)
+    needs: evaluate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-train.txt
+
+      - name: Ambil hasil training
+        uses: actions/download-artifact@v4
+        with:
+          name: mlflow-run
+          path: .
+
+      - name: Daftarkan model ke Model Registry (stage Staging)
+        run: |
+          python src/models/registry_tool.py register \
+            --run-name "ci-${GITHUB_SHA::7}" --stage Staging
+
+      - name: Ringkasan registry
+        run: |
+          {
+            echo '### Model Registry'
+            echo '```'
+            python src/models/registry_tool.py compare
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Simpan registry
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-registry
+          path: |
+            mlflow.db
+            mlartifacts
+          retention-days: 30
+          if-no-files-found: error

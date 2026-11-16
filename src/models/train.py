@@ -1,17 +1,3 @@
-"""
-Training model klasifikasi tren harga (Naik / Turun / Stabil) dengan MLflow.
-
-Setiap eksekusi = satu run MLflow yang mencatat:
-    * parameter  : hyperparameter, seed, ukuran data, versi data (md5 + tag)
-    * metrik     : walk-forward CV (data latih) dan evaluasi hold-out (data uji)
-    * artefak    : model (log_model), confusion matrix, classification report
-    * tag        : git commit, versi data, pemetaan label
-
-Evaluasi mengikuti urutan waktu (bukan acak) agar tidak terjadi kebocoran
-data masa depan: 80% data tertua untuk latih (dengan walk-forward CV),
-20% data terbaru untuk uji akhir.
-"""
-
 import argparse
 import hashlib
 import logging
@@ -204,12 +190,14 @@ def compute_metrics(y_true, y_pred, classes, prefix):
 
 
 def setup_mlflow(tracking_uri, experiment_name):
-    """Atur tracking URI dan buat experiment (artefak di mlartifacts/)."""
+    """Atur tracking URI dan buat experiment (artefak di mlartifacts/ atau
+    folder pada env MLFLOW_ARTIFACT_ROOT)."""
     mlflow.set_tracking_uri(tracking_uri)
     if mlflow.get_experiment_by_name(experiment_name) is None:
+        artifact_root = Path(os.getenv("MLFLOW_ARTIFACT_ROOT")
+                             or PROJECT_ROOT / "mlartifacts").resolve()
         mlflow.create_experiment(
-            experiment_name,
-            artifact_location=(PROJECT_ROOT / "mlartifacts").as_uri())
+            experiment_name, artifact_location=artifact_root.as_uri())
     mlflow.set_experiment(experiment_name)
 
 
@@ -296,6 +284,15 @@ def run_training(args):
     return run.info.run_id, metrics
 
 
+def apply_training_config(args):
+    """Timpa hyperparameter CLI dengan bagian 'training' pada config.yaml."""
+    for key, value in load_config().get("training", {}).items():
+        if not hasattr(args, key):
+            raise ValueError(f"Kunci tidak dikenal pada bagian training: {key}")
+        setattr(args, key, value)
+    return args
+
+
 def parse_args(argv=None):
     """Parse argumen CLI (semua punya nilai default)."""
     parser = argparse.ArgumentParser(
@@ -317,6 +314,9 @@ def parse_args(argv=None):
     parser.add_argument("--experiment-name", default=DEFAULT_EXPERIMENT)
     parser.add_argument("--tracking-uri", default=default_tracking_uri())
     parser.add_argument("--run-name", default=None)
+    parser.add_argument("--from-config", action="store_true",
+                        help="ambil hyperparameter dari bagian 'training' "
+                             "pada config.yaml (dipakai CI)")
     return parser.parse_args(argv)
 
 
@@ -327,6 +327,8 @@ def main(argv=None):
                         format="%(asctime)s [%(levelname)s] %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S")
     try:
+        if args.from_config:
+            apply_training_config(args)
         run_training(args)
     except (FileNotFoundError, ValueError) as exc:
         logger.error("%s", exc)

@@ -21,8 +21,7 @@ DEFAULT_LATEST = PROJECT_ROOT / "data" / "processed" / "latest.parquet"
 DEFAULT_EXPORT_DIR = PROJECT_ROOT / "models" / "production"
 DEFAULT_YAML = PROJECT_ROOT / "models" / "production_model.yaml"
 STAGES = ("Staging", "Production")
-HYPER_KEYS = ("n_estimators", "max_depth",
-              "learning_rate", "C", "class_weight")
+HYPER_KEYS = ("n_estimators", "max_depth", "learning_rate", "C", "class_weight")
 MODEL_DESCRIPTION = (
     "Klasifikasi tren harga 1 jam ke depan (Naik / Turun / Stabil) untuk BTC dan ETH "
     "berbasis XGBoost. Input: 21 fitur teknikal per jam. Output: indeks kelas "
@@ -42,8 +41,7 @@ def get_run(client, experiment_name, run_name):
         filter_string=f"tags.mlflow.runName = '{run_name}'",
         order_by=["attributes.start_time DESC"], max_results=1)
     if not runs:
-        raise ValueError(
-            f"Run '{run_name}' tidak ditemukan di '{experiment_name}'.")
+        raise ValueError(f"Run '{run_name}' tidak ditemukan di '{experiment_name}'.")
     return runs[0]
 
 
@@ -77,13 +75,15 @@ def cmd_register(args, client):
     params, metrics, tags = run.data.params, run.data.metrics, run.data.tags
     model_uri = tags.get("model_uri")
     if not model_uri:
-        raise ValueError(
-            "Run tidak memiliki tag model_uri (model belum di-log).")
+        raise ValueError("Run tidak memiliki tag model_uri (model belum di-log).")
 
     for existing in list_versions(client, args.name):
         if existing.tags.get("run_id") == run.info.run_id:
             logger.warning("Run ini sudah terdaftar sebagai versi %s. Dilewati.",
                            existing.version)
+            if args.stage:
+                apply_stage(client, args.name, existing.version,
+                            normalize_stage(args.stage))
             return
 
     version = mlflow.register_model(model_uri, args.name).version
@@ -96,8 +96,7 @@ def cmd_register(args, client):
         f"commit {tags.get('git_commit')}.")
     client.update_model_version(args.name, version, description=description)
     if not client.get_registered_model(args.name).description:
-        client.update_registered_model(
-            args.name, description=MODEL_DESCRIPTION)
+        client.update_registered_model(args.name, description=MODEL_DESCRIPTION)
 
     metadata = {
         "run_id": run.info.run_id, "run_name": args.run_name,
@@ -110,8 +109,9 @@ def cmd_register(args, client):
     }
     for key, value in metadata.items():
         client.set_model_version_tag(args.name, version, key, str(value))
-    logger.info("Terdaftar: %s versi %s (run %s)",
-                args.name, version, args.run_name)
+    logger.info("Terdaftar: %s versi %s (run %s)", args.name, version, args.run_name)
+    if args.stage:
+        apply_stage(client, args.name, version, normalize_stage(args.stage))
 
 
 def version_row(client, mv, aliases):
@@ -141,8 +141,7 @@ def cmd_compare(args, client):
     if not versions:
         raise ValueError(f"Model '{args.name}' belum punya versi.")
     aliases = alias_map(client, args.name)
-    rows = {f"v{mv.version}": version_row(
-        client, mv, aliases) for mv in versions}
+    rows = {f"v{mv.version}": version_row(client, mv, aliases) for mv in versions}
     table = pd.DataFrame(rows)
     print(f"\nModel: {args.name}\n")
     print(table.to_string())
@@ -152,35 +151,43 @@ def cmd_compare(args, client):
           f"sebagai pembeda): {best}")
 
 
-def cmd_promote(args, client):
-    """Transisi stage (dan alias) sebuah versi: Staging atau Production."""
-    stage = args.stage.capitalize()
+def normalize_stage(stage):
+    """Validasi nama stage dan kembalikan dalam format baku (mis. Staging)."""
+    stage = stage.capitalize()
     if stage not in STAGES:
         raise ValueError(f"Stage harus salah satu dari {STAGES}.")
+    return stage
+
+
+def apply_stage(client, name, version, stage):
+    """Atur stage dan alias sebuah versi (Staging atau Production)."""
     try:
         with warnings.catch_warnings():  # API stage deprecated di MLflow 3.x
             warnings.simplefilter("ignore", FutureWarning)
             client.transition_model_version_stage(
-                args.name, args.version, stage,
+                name, version, stage,
                 archive_existing_versions=(stage == "Production"))
     except Exception as exc:
-        logger.warning(
-            "Transisi stage gagal/tidak tersedia (%s). Alias tetap diatur.", exc)
-    client.set_registered_model_alias(args.name, stage.lower(), args.version)
+        logger.warning("Transisi stage gagal/tidak tersedia (%s). Alias tetap diatur.", exc)
+    client.set_registered_model_alias(name, stage.lower(), version)
 
     if stage == "Production":  # versi yang naik ke Production meninggalkan Staging
         try:
-            staged = client.get_model_version_by_alias(args.name, "staging")
-            if str(staged.version) == str(args.version):
-                client.delete_registered_model_alias(args.name, "staging")
+            staged = client.get_model_version_by_alias(name, "staging")
+            if str(staged.version) == str(version):
+                client.delete_registered_model_alias(name, "staging")
         except MlflowException:
             pass
-    logger.info("%s versi %s -> %s (alias '%s')", args.name, args.version,
-                stage, stage.lower())
-    aliases = alias_map(client, args.name)
-    for mv in list_versions(client, args.name):
+    logger.info("%s versi %s -> %s (alias '%s')", name, version, stage, stage.lower())
+    aliases = alias_map(client, name)
+    for mv in list_versions(client, name):
         print(f"  v{mv.version}: stage={mv.current_stage}, "
               f"aliases={aliases.get(str(mv.version), [])}")
+
+
+def cmd_promote(args, client):
+    """Transisi stage (dan alias) sebuah versi: Staging atau Production."""
+    apply_stage(client, args.name, args.version, normalize_stage(args.stage))
 
 
 def load_inference_data(path, features):
@@ -190,12 +197,10 @@ def load_inference_data(path, features):
     df = pd.read_parquet(path)
     missing = set(features) - set(df.columns)
     if missing:
-        raise ValueError(
-            f"Kolom fitur hilang pada data inferensi: {sorted(missing)}")
+        raise ValueError(f"Kolom fitur hilang pada data inferensi: {sorted(missing)}")
     df = df.dropna(subset=features)
     if df.empty:
-        raise ValueError(
-            "Tidak ada baris dengan fitur lengkap untuk inferensi.")
+        raise ValueError("Tidak ada baris dengan fitur lengkap untuk inferensi.")
     return df
 
 
@@ -272,18 +277,17 @@ COMMANDS = {"register": cmd_register, "compare": cmd_compare, "promote": cmd_pro
 def parse_args(argv=None):
     """Parse argumen CLI dengan subperintah."""
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--name", default=DEFAULT_MODEL_NAME,
-                        help="nama model terdaftar")
+    common.add_argument("--name", default=DEFAULT_MODEL_NAME, help="nama model terdaftar")
     common.add_argument("--experiment-name", default=DEFAULT_EXPERIMENT)
     common.add_argument("--tracking-uri", default=default_tracking_uri())
 
-    parser = argparse.ArgumentParser(
-        description="Manajemen MLflow Model Registry.")
+    parser = argparse.ArgumentParser(description="Manajemen MLflow Model Registry.")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    reg = sub.add_parser("register", parents=[
-                         common], help="daftarkan model dari run")
+    reg = sub.add_parser("register", parents=[common], help="daftarkan model dari run")
     reg.add_argument("--run-name", required=True)
+    reg.add_argument("--stage", default=None,
+                     help="langsung atur stage setelah registrasi, mis. Staging")
 
     sub.add_parser("compare", parents=[common], help="bandingkan semua versi")
 
@@ -291,15 +295,13 @@ def parse_args(argv=None):
     pro.add_argument("--version", type=int, required=True)
     pro.add_argument("--stage", required=True, help="Staging atau Production")
 
-    ver = sub.add_parser("verify", parents=[
-                         common], help="uji inferensi model Production")
+    ver = sub.add_parser("verify", parents=[common], help="uji inferensi model Production")
     ver.add_argument("--alias", default="production")
     ver.add_argument("--by-stage", action="store_true",
                      help="muat lewat URI stage (models:/nama/Production)")
     ver.add_argument("--data", default=str(DEFAULT_LATEST))
 
-    exp = sub.add_parser("export", parents=[
-                         common], help="ekspor model + metadata YAML")
+    exp = sub.add_parser("export", parents=[common], help="ekspor model + metadata YAML")
     exp.add_argument("--alias", default="production")
     exp.add_argument("--out-dir", default=str(DEFAULT_EXPORT_DIR))
     exp.add_argument("--yaml", default=str(DEFAULT_YAML))
